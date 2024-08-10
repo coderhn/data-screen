@@ -1,0 +1,8 @@
+#content .centroid {
+    display: none;
+  }
+  
+  #content .centroid circle {
+    fill: red;
+  }
+  

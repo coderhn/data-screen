@@ -1,7 +1,12 @@
 import React from "react";
+import ChinaMap from "../../../../components/2d-map";
 
 type Props = {};
 
 export default function Content({}: Props) {
-  return <div>Content</div>;
+  return (
+    <div>
+      <ChinaMap />
+    </div>
+  );
 }
