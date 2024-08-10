@@ -2,16 +2,78 @@ import React, { useEffect, useRef } from "react";
 import * as d3 from "d3";
 import "./style.css";
 type Props = {};
+
+function quadraticBezier(p0, p1, p2, t) {
+  const x = Math.pow(1 - t, 2) * p0[0] + 2 * (1 - t) * t * p1[0] + Math.pow(t, 2) * p2[0];
+  const y = Math.pow(1 - t, 2) * p0[1] + 2 * (1 - t) * t * p1[1] + Math.pow(t, 2) * p2[1];
+  return [x, y];
+}
+
 export default function ChinaMap({}: Props) {
   const isCreatedRef = useRef(false);
+  const geojsonRef = useRef<any>({});
+  const contextRef = useRef<CanvasRenderingContext2D>();
+  let londonLonLat: [number, number] = [116.407526, 39.90403];
+  let newYorkLonLat: [number, number] = [121.473701, 31.230416];
+  // @ts-ignore
+  let geoInterpolator = d3.geoInterpolate(londonLonLat, newYorkLonLat);
+  let u = 0;
+
+  const update = (
+    context: CanvasRenderingContext2D,
+    geoGenerator: d3.GeoPath<any, d3.GeoPermissibleObjects>,
+    projection: d3.GeoProjection
+  ) => {
+    isCreatedRef.current = true;
+    context?.clearRect(0, 0, 800, 800);
+
+    let circleGenerator = d3.geoCircle().center([116.407526, 39.90403]).radius(1);
+    contextRef.current?.beginPath();
+    contextRef.current!.strokeStyle = "red";
+    geoGenerator(circleGenerator());
+    contextRef.current?.stroke();
+    context.lineWidth = 0.5;
+    context.strokeStyle = "#333";
+    context.beginPath();
+
+    geoGenerator({ type: "FeatureCollection", features: geojsonRef.current.features });
+    context.stroke();
+    context.beginPath();
+
+    context.strokeStyle = "red";
+    // 将地理坐标转换为屏幕坐标
+    const london = projection(londonLonLat)!;
+    const newYork = projection(newYorkLonLat)!;
+
+    // 计算贝塞尔曲线的控制点，位于起点和终点的中间位置，并向上移动一定距离
+    const midPoint = [(london[0] + newYork[0]) / 2, (london[1] + newYork[1]) / 2];
+    const controlPoint = [midPoint[0], midPoint[1] - 125]; // 控制点的Y坐标提升，使得曲线向上弯曲
+    context.moveTo(london[0], london[1]);
+    context.quadraticCurveTo(controlPoint[0], controlPoint[1], newYork[0], newYork[1]);
+    context.stroke();
+
+    // Point
+    context.beginPath();
+    const point = quadraticBezier(london, controlPoint, newYork, u);
+    context.arc(point[0], point[1], 5, 0, 2 * Math.PI); // 半径为5的圆
+    context.fillStyle = "red";
+    context.fill();
+
+    u += 0.01;
+    if (u > 1) u = 0;
+  };
 
   useEffect(() => {
+    contextRef.current = d3
+      .select("#content canvas")
+      .node()
+      // @ts-ignore
+      ?.getContext("2d") as CanvasRenderingContext2D;
     d3.json("https://geojson.cn/api/data/china.json").then((geojson: any) => {
       if (isCreatedRef.current) {
         return;
       }
-      const colorScale = d3.scaleOrdinal(d3.schemeCategory10);
-      //   这个根据自己的布局要求来，内容宽度和高度自己定
+      // 1、声明矩形投影
       let projection = d3.geoEquirectangular().fitExtent(
         [
           [5, 5],
@@ -19,108 +81,20 @@ export default function ChinaMap({}: Props) {
         ],
         geojson
       );
-      let geoGenerator = d3.geoPath().projection(projection);
-      d3.select("#content g.map")
-        .selectAll("path")
-        .data(geojson.features)
-        .join("path")
-        // @ts-ignore
-        .attr("d", (d) => {
-          // @ts-ignore
-          return geoGenerator(d);
-        })
-        .attr("fill", (d) => {
-          // @ts-ignore
-          return colorScale(d.properties.name);
-        })
-        .attr("stroke", "#fff")
-        .attr("stroke-width", 1)
-        .attr("opacity", 0.8)
-        .on("mouseenter", (event, d) => {
-          d3.select(event.currentTarget).attr("opacity", 1);
-          // @ts-ignore
-          let centroid = geoGenerator.centroid(d);
-          d3.select("#content .centroid")
-            .style("display", "inline")
-            .attr("transform", "translate(" + centroid + ")");
-          // @ts-ignore
-          d3.select("#content .centroid text").text(d.properties.name);
-        })
-        .on("mouseleave", (event) => {
-          d3.select(event.currentTarget).attr("opacity", 0.8);
-        });
-      const svg = d3.select("#content svg");
-
-      // 多条飞线的起点和终点数组
-      const locationsArr = [
-        [
-          [116.407526, 39.90403], // 北京
-          [121.473701, 31.230416], // 上海
-        ],
-        [
-          [116.407526, 39.90403], // 北京
-          [113.429919, 23.334643], // 广州
-        ],
-        [
-          [116.407526, 39.90403], // 北京
-          [88.388277, 31.56375], // 西藏
-        ],
-        [
-          [116.407526, 39.90403], // 北京
-          [101.485106, 25.008643], // 云南
-        ],
-      ];
-
-      locationsArr.forEach((locations) => {
-        const source = projection(locations[0]);
-        const target = projection(locations[1]);
-        const controlPoint = [(source[0] + target[0]) / 2, source[1] - 100];
-
-        // 生成贝塞尔曲线路径
-        const pathData = `M${source[0]},${source[1]} Q${controlPoint[0]},${controlPoint[1]} ${target[0]},${target[1]}`;
-
-        // 添加飞线
-        const flyLine = svg
-          .append("path")
-          .attr("d", pathData)
-          .attr("fill", "none")
-          .attr("stroke", "red")
-          .attr("stroke-width", 2)
-          .attr("opacity", 0.8);
-
-        // 添加飞线的动画
-        const totalLength = flyLine.node().getTotalLength();
-
-        flyLine
-          .attr("stroke-dasharray", `${totalLength} ${totalLength}`)
-          .attr("stroke-dashoffset", totalLength)
-          .transition()
-          .duration(2000)
-          .ease(d3.easeLinear)
-          .attr("stroke-dashoffset", 0)
-          .attrTween("stroke-width", function () {
-            return function (t) {
-              return d3.interpolateString("0", "2")(t);
-            };
-          })
-          .attrTween("opacity", function () {
-            return function (t) {
-              return d3.interpolateNumber(0, 1)(t);
-            };
-          });
-      });
-      isCreatedRef.current = true;
+      // 2、声明路径生成器
+      const geoGenerator = d3
+        .geoPath()
+        .projection(projection)
+        .pointRadius(4)
+        .context(contextRef.current!);
+      geojsonRef.current = geojson;
+      // 3、定时绘制canvas
+      window.setInterval(update.bind(this, contextRef.current!, geoGenerator, projection), 50);
     });
   }, []);
   return (
     <div id="content">
-      <svg width={800} height={800}>
-        <g className="map"></g>
-        <g className="centroid">
-          <circle r="4"></circle>
-          <text></text>
-        </g>
-      </svg>
+      <canvas width="800" height="800"></canvas>
     </div>
   );
 }
