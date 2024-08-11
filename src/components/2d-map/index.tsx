@@ -8,13 +8,15 @@ function quadraticBezier(p0, p1, p2, t) {
   const x = Math.pow(1 - t, 2) * p0[0] + 2 * (1 - t) * t * p1[0] + Math.pow(t, 2) * p2[0];
   const y = Math.pow(1 - t, 2) * p0[1] + 2 * (1 - t) * t * p1[1] + Math.pow(t, 2) * p2[1];
   return [x, y];
-
   // d3内置插值函数方法
   // const interpolate = d3.interpolateNumber; // D3的数值插值函数
   // const x = interpolate(interpolate(p0[0], p1[0])(t), interpolate(p1[0], p2[0])(t))(t);
   // const y = interpolate(interpolate(p0[1], p1[1])(t), interpolate(p1[1], p2[1])(t))(t);
   // return [x, y];
 }
+
+let u = 0;
+let q = 1;
 
 export default function ChinaMap({}: Props) {
   const isCreatedRef = useRef(false);
@@ -27,7 +29,6 @@ export default function ChinaMap({}: Props) {
 
   // @ts-ignore
   let geoInterpolator = d3.geoInterpolate(londonLonLat, newYorkLonLat);
-  let u = 0;
 
   const update = (
     context: CanvasRenderingContext2D,
@@ -35,30 +36,40 @@ export default function ChinaMap({}: Props) {
     projection: d3.GeoProjection,
     geoJson: d3.ExtendedFeatureCollection
   ) => {
-    isCreatedRef.current = true;
     context?.clearRect(0, 0, 800, 800);
-
     // 遍历geojson对象根据每个feature对象生成地图（为什么这样做，方便后面按省进行鼠标交互），填充、描边地图
     geoJson.features?.forEach((d) => {
+      const centroid = geoGenerator.centroid(d);
+
       context.beginPath();
-      // context.fillStyle = "#eee";
-      context.fillStyle = mousemoveLocationRef.current
-        ? d3.geoContains(d, mousemoveLocationRef.current)
-          ? "red"
-          : "#eee"
-        : "#eee";
+
+      const isHover =
+        mousemoveLocationRef.current && d3.geoContains(d, mousemoveLocationRef.current);
+
+      context.fillStyle = isHover ? "rgba(125,125,125,1)" : "rgba(125,125,125,0.5)";
       geoGenerator(d);
       context.fill();
       context.strokeStyle = "#000";
       context.stroke();
+      if (isHover) {
+        context.fillStyle = "red";
+        context.fillText(d.properties!.name, centroid[0] + 2, centroid[1] + 2);
+        context.beginPath();
+        context.arc(centroid[0], centroid[1], 2, 0, 2 * Math.PI);
+        context.fill();
+      }
     });
 
     // 绘制圆圈
+
     context.beginPath();
-    let circleGenerator = d3.geoCircle().center([116.407526, 39.90403]).radius(1);
+    let circleGenerator = d3.geoCircle().radius(1 * u);
     context.lineWidth = 0.5;
+    const interpolateRed = d3.interpolate("rgba(255, 0, 0, 0)", "rgba(255, 0, 0, 1)");
     context.strokeStyle = "red";
-    geoGenerator(circleGenerator());
+    geoGenerator(circleGenerator.center(londonLonLat)());
+    context.fillStyle = interpolateRed(1 - u);
+    context.fill();
     context.stroke();
 
     // 绘制两省之间的弧线
@@ -69,20 +80,38 @@ export default function ChinaMap({}: Props) {
     // 计算贝塞尔曲线的控制点，位于起点和终点的中间位置，并向上移动一定距离
     const midPoint = [(london[0] + newYork[0]) / 2, (london[1] + newYork[1]) / 2];
     const controlPoint = [midPoint[0], midPoint[1] - 125]; // 控制点的Y坐标提升，使得曲线向上弯曲
+
     context.moveTo(london[0], london[1]);
     context.quadraticCurveTo(controlPoint[0], controlPoint[1], newYork[0], newYork[1]);
     context.stroke();
 
     // Point
     context.beginPath();
-    // 因为u是变量，
     const point = quadraticBezier(london, controlPoint, newYork, u);
     context.arc(point[0], point[1], 5, 0, 2 * Math.PI); // 半径为5的圆
     context.fillStyle = "red";
     context.fill();
 
-    u += 0.01;
-    if (u > 1) u = 0;
+    // if (q > 1) {
+    //   context.beginPath();
+    //   let circleGenerator = d3.geoCircle().radius(1 * u);
+    //   context.lineWidth = 0.5;
+    //   const interpolateRed = d3.interpolate("rgba(255, 0, 0, 0)", "rgba(255, 0, 0, 1)");
+    //   context.strokeStyle = "red";
+    //   geoGenerator(circleGenerator.center(newYorkLonLat)());
+    //   context.fillStyle = interpolateRed(1 - u);
+    //   context.fill();
+    //   context.stroke();
+    // }
+
+    u += 0.006;
+    // q -= 0.005;
+
+    if (u > 1) {
+      u = 0;
+      // q = 2;
+    }
+    isCreatedRef.current = true;
   };
 
   useEffect(() => {
@@ -148,6 +177,7 @@ export default function ChinaMap({}: Props) {
   return (
     <div id="content">
       <canvas width="800" height="800"></canvas>
+      <div className="bounding-box"></div>
     </div>
   );
 }
