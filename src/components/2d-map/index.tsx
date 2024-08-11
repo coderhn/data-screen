@@ -4,17 +4,27 @@ import "./style.css";
 type Props = {};
 
 function quadraticBezier(p0, p1, p2, t) {
+  // 原生实现方法
   const x = Math.pow(1 - t, 2) * p0[0] + 2 * (1 - t) * t * p1[0] + Math.pow(t, 2) * p2[0];
   const y = Math.pow(1 - t, 2) * p0[1] + 2 * (1 - t) * t * p1[1] + Math.pow(t, 2) * p2[1];
   return [x, y];
+
+  // d3内置插值函数方法
+  // const interpolate = d3.interpolateNumber; // D3的数值插值函数
+  // const x = interpolate(interpolate(p0[0], p1[0])(t), interpolate(p1[0], p2[0])(t))(t);
+  // const y = interpolate(interpolate(p0[1], p1[1])(t), interpolate(p1[1], p2[1])(t))(t);
+  // return [x, y];
 }
 
 export default function ChinaMap({}: Props) {
   const isCreatedRef = useRef(false);
-  const geojsonRef = useRef<any>({});
   const contextRef = useRef<CanvasRenderingContext2D>();
+  const intervalRef = useRef<number>();
   let londonLonLat: [number, number] = [116.407526, 39.90403];
   let newYorkLonLat: [number, number] = [121.473701, 31.230416];
+
+  const mousemoveLocationRef = useRef<[number, number]>();
+
   // @ts-ignore
   let geoInterpolator = d3.geoInterpolate(londonLonLat, newYorkLonLat);
   let u = 0;
@@ -22,25 +32,36 @@ export default function ChinaMap({}: Props) {
   const update = (
     context: CanvasRenderingContext2D,
     geoGenerator: d3.GeoPath<any, d3.GeoPermissibleObjects>,
-    projection: d3.GeoProjection
+    projection: d3.GeoProjection,
+    geoJson: d3.ExtendedFeatureCollection
   ) => {
     isCreatedRef.current = true;
     context?.clearRect(0, 0, 800, 800);
 
+    // 遍历geojson对象根据每个feature对象生成地图（为什么这样做，方便后面按省进行鼠标交互），填充、描边地图
+    geoJson.features?.forEach((d) => {
+      context.beginPath();
+      // context.fillStyle = "#eee";
+      context.fillStyle = mousemoveLocationRef.current
+        ? d3.geoContains(d, mousemoveLocationRef.current)
+          ? "red"
+          : "#eee"
+        : "#eee";
+      geoGenerator(d);
+      context.fill();
+      context.strokeStyle = "#000";
+      context.stroke();
+    });
+
+    // 绘制圆圈
+    context.beginPath();
     let circleGenerator = d3.geoCircle().center([116.407526, 39.90403]).radius(1);
-    contextRef.current?.beginPath();
-    contextRef.current!.strokeStyle = "red";
-    geoGenerator(circleGenerator());
-    contextRef.current?.stroke();
     context.lineWidth = 0.5;
-    context.strokeStyle = "#333";
-    context.beginPath();
-
-    geoGenerator({ type: "FeatureCollection", features: geojsonRef.current.features });
-    context.stroke();
-    context.beginPath();
-
     context.strokeStyle = "red";
+    geoGenerator(circleGenerator());
+    context.stroke();
+
+    // 绘制两省之间的弧线
     // 将地理坐标转换为屏幕坐标
     const london = projection(londonLonLat)!;
     const newYork = projection(newYorkLonLat)!;
@@ -54,6 +75,7 @@ export default function ChinaMap({}: Props) {
 
     // Point
     context.beginPath();
+    // 因为u是变量，
     const point = quadraticBezier(london, controlPoint, newYork, u);
     context.arc(point[0], point[1], 5, 0, 2 * Math.PI); // 半径为5的圆
     context.fillStyle = "red";
@@ -74,22 +96,53 @@ export default function ChinaMap({}: Props) {
         return;
       }
       // 1、声明矩形投影
-      let projection = d3.geoEquirectangular().fitExtent(
+      const projection = d3.geoEquirectangular().fitExtent(
         [
           [5, 5],
           [800, 800],
         ],
         geojson
-      );
+      ) as d3.GeoProjection;
+
       // 2、声明路径生成器
       const geoGenerator = d3
         .geoPath()
         .projection(projection)
         .pointRadius(4)
         .context(contextRef.current!);
-      geojsonRef.current = geojson;
+
       // 3、定时绘制canvas
-      window.setInterval(update.bind(this, contextRef.current!, geoGenerator, projection), 50);
+      // intervalRef.current = window.setInterval(
+      //   update.bind(this, contextRef.current!, geoGenerator, projection, geojson),
+      //   50
+      // );
+
+      function animate(
+        context: CanvasRenderingContext2D,
+        geoGenerator: d3.GeoPath<any, d3.GeoPermissibleObjects>,
+        projection: d3.GeoProjection,
+        geoJson: d3.ExtendedFeatureCollection
+      ) {
+        update(contextRef.current!, geoGenerator, projection, geojson);
+        window.requestAnimationFrame(() => animate(context, geoGenerator, projection, geoJson));
+      }
+
+      animate(contextRef.current!, geoGenerator, projection, geojson);
+
+      const onMousemove = (e: any) => {
+        if (!projection) {
+          return;
+        }
+        let pos = d3.pointer(e);
+        mousemoveLocationRef.current = projection.invert(pos)!;
+        // update(contextRef.current!, geoGenerator, projection, geojson);
+      };
+
+      d3.select("#content canvas").on("mousemove", onMousemove);
+
+      return () => {
+        window.clearInterval(intervalRef.current);
+      };
     });
   }, []);
   return (
