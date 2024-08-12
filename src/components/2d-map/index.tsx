@@ -16,7 +16,26 @@ function quadraticBezier(p0, p1, p2, t) {
 }
 
 let u = 0;
-let q = 1;
+
+let sequentialScale = d3.scaleSequential().domain([0, 100]).interpolator(d3.interpolateRainbow);
+
+let zoom = d3.zoom().on("zoom", handleZoom);
+
+function handleZoom(e) {
+  // const context = d3
+  //   .select("#content canvas")
+  //   .node()
+  //   // @ts-ignore
+  //   ?.getContext("2d") as CanvasRenderingContext2D;
+  // context.save();
+  // context.setTransform(e.transform);
+  d3.select("#content canvas").attr("zoom", e.zoom);
+  // context.restore();
+}
+
+function initZoom() {
+  d3.select("#content canvas").call(zoom);
+}
 
 export default function ChinaMap({}: Props) {
   const isCreatedRef = useRef(false);
@@ -38,7 +57,7 @@ export default function ChinaMap({}: Props) {
   ) => {
     context?.clearRect(0, 0, 800, 800);
     // 遍历geojson对象根据每个feature对象生成地图（为什么这样做，方便后面按省进行鼠标交互），填充、描边地图
-    geoJson.features?.forEach((d) => {
+    geoJson.features?.forEach((d, i) => {
       const centroid = geoGenerator.centroid(d);
 
       context.beginPath();
@@ -46,7 +65,7 @@ export default function ChinaMap({}: Props) {
       const isHover =
         mousemoveLocationRef.current && d3.geoContains(d, mousemoveLocationRef.current);
 
-      context.fillStyle = isHover ? "rgba(125,125,125,1)" : "rgba(125,125,125,0.5)";
+      context.fillStyle = isHover ? "rgba(125,125,125,1)" : sequentialScale(i + 70);
       geoGenerator(d);
       context.fill();
       context.strokeStyle = "#000";
@@ -124,6 +143,7 @@ export default function ChinaMap({}: Props) {
       if (isCreatedRef.current) {
         return;
       }
+
       // 1、声明矩形投影
       const projection = d3.geoEquirectangular().fitExtent(
         [
@@ -168,6 +188,7 @@ export default function ChinaMap({}: Props) {
       };
 
       d3.select("#content canvas").on("mousemove", onMousemove);
+      initZoom();
 
       return () => {
         window.clearInterval(intervalRef.current);
