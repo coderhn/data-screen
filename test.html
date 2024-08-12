@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>China Map with Flowing Light Effect</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+      /* 基本样式 */
+      svg {
+        width: 800px;
+        height: 800px;
+        background-color: #f9f9f9;
+      }
+
+      /* 路径的基本样式 */
+      path {
+        fill: none;
+        stroke-width: 2;
+        stroke: url(#grad1); /* 应用渐变作为轮廓颜色 */
+      }
+    </style>
+  </head>
+  <body>
+    <svg></svg>
+
+    <script>
+      // 设置投影方式
+      const projection = d3.geoMercator().center([104, 35]).scale(600).translate([400, 400]); // 将地图居中
+
+      const path = d3.geoPath().projection(projection);
+
+      // 创建SVG
+      const svg = d3.select("svg");
+
+      // 定义流光渐变
+      svg
+        .append("defs")
+        .append("linearGradient")
+        .attr("id", "grad1")
+        .attr("x1", "100%")
+        .attr("y1", "0%")
+        .attr("x2", "0%")
+        .attr("y2", "0%")
+        .selectAll("stop")
+        .data([
+          { offset: "0%", color: "rgba(255, 0, 0, 0.5)" },
+          { offset: "50%", color: "rgba(255, 255, 0, 1)" },
+          { offset: "100%", color: "rgba(255, 0, 0, 0.5)" },
+        ])
+        .enter()
+        .append("stop")
+        .attr("offset", function (d) {
+          return d.offset;
+        })
+        .attr("stop-color", function (d) {
+          return d.color;
+        });
+
+      // 加载GeoJSON数据并绘制中国地图轮廓
+      d3.json("https://geojson.cn/api/data/china.json").then(function (geojson) {
+        // 提取所有省份的 Feature
+        const features = geojson.features;
+
+        // 使用 d3.geoPath() 绘制轮廓
+        svg
+          .selectAll("path")
+          .data(features)
+          .enter()
+          .append("path")
+          .attr("d", path)
+          .attr("class", "region"); // 为每个区域应用相同的样式类
+
+        // 创建流光效果的动画
+        svg
+          .selectAll("path")
+          .append("animate")
+          .attr("attributeName", "stroke-dashoffset")
+          .attr("from", "0")
+          .attr("to", "1000")
+          .attr("dur", "5s")
+          .attr("repeatCount", "indefinite");
+      });
+
+      // 添加 stroke-dasharray 属性，控制轮廓的虚线段
+      svg
+        .selectAll("path")
+        .attr("stroke-dasharray", "5,5")
+        .attr("stroke-dashoffset", "0")
+        .transition()
+        .duration(5000)
+        .ease(d3.easeLinear)
+        .attrTween("stroke-dashoffset", function () {
+          return d3.interpolateString("0", "1000");
+        })
+        .on("end", function repeat() {
+          d3.select(this)
+            .attr("stroke-dashoffset", "0")
+            .transition()
+            .duration(5000)
+            .ease(d3.easeLinear)
+            .attrTween("stroke-dashoffset", function () {
+              return d3.interpolateString("0", "1000");
+            })
+            .on("end", repeat);
+        });
+    </script>
+  </body>
+</html>

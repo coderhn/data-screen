@@ -1,6 +1,9 @@
 import React, { useEffect, useRef } from "react";
 import * as d3 from "d3";
 import "./style.css";
+import mapBc1 from "../../assets/map_bc_1.png";
+import mapBc from "../../assets/map.png";
+
 type Props = {};
 
 function quadraticBezier(p0, p1, p2, t) {
@@ -15,6 +18,8 @@ function quadraticBezier(p0, p1, p2, t) {
   // return [x, y];
 }
 
+const WIDTH = 807;
+const HEIGHT = 605;
 let u = 0;
 
 let sequentialScale = d3.scaleSequential().domain([0, 100]).interpolator(d3.interpolateRainbow);
@@ -55,7 +60,9 @@ export default function ChinaMap({}: Props) {
     projection: d3.GeoProjection,
     geoJson: d3.ExtendedFeatureCollection
   ) => {
-    context?.clearRect(0, 0, 800, 800);
+    context?.clearRect(0, 0, WIDTH, HEIGHT);
+    context.drawImage(document.getElementById("mapBc") as HTMLImageElement, 0, 0, WIDTH, HEIGHT);
+    context.drawImage(document.getElementById("mapBc1") as HTMLImageElement, -5, 20, WIDTH, HEIGHT);
     // 遍历geojson对象根据每个feature对象生成地图（为什么这样做，方便后面按省进行鼠标交互），填充、描边地图
     geoJson.features?.forEach((d, i) => {
       const centroid = geoGenerator.centroid(d);
@@ -64,24 +71,24 @@ export default function ChinaMap({}: Props) {
 
       const isHover =
         mousemoveLocationRef.current && d3.geoContains(d, mousemoveLocationRef.current);
-
-      context.fillStyle = isHover ? "rgba(125,125,125,1)" : sequentialScale(i + 70);
       geoGenerator(d);
+      context.fillStyle = isHover ? "rgba(125,125,125,1)" : sequentialScale(i + 70);
       context.fill();
-      context.strokeStyle = "#000";
+      context.strokeStyle = "#fff";
       context.stroke();
+
       if (isHover) {
-        context.fillStyle = "red";
-        context.fillText(d.properties!.name, centroid[0] + 2, centroid[1] + 2);
         context.beginPath();
         context.arc(centroid[0], centroid[1], 2, 0, 2 * Math.PI);
         context.fill();
+        context.fillStyle = "#fff";
+        context.font = "25px serif";
+        context.fillText(d.properties!.name, centroid[0], centroid[1]);
       }
     });
 
-    // 绘制圆圈
-
     context.beginPath();
+    // 绘制圆圈
     let circleGenerator = d3.geoCircle().radius(1 * u);
     context.lineWidth = 0.5;
     const interpolateRed = d3.interpolate("rgba(255, 0, 0, 0)", "rgba(255, 0, 0, 1)");
@@ -111,24 +118,10 @@ export default function ChinaMap({}: Props) {
     context.fillStyle = "red";
     context.fill();
 
-    // if (q > 1) {
-    //   context.beginPath();
-    //   let circleGenerator = d3.geoCircle().radius(1 * u);
-    //   context.lineWidth = 0.5;
-    //   const interpolateRed = d3.interpolate("rgba(255, 0, 0, 0)", "rgba(255, 0, 0, 1)");
-    //   context.strokeStyle = "red";
-    //   geoGenerator(circleGenerator.center(newYorkLonLat)());
-    //   context.fillStyle = interpolateRed(1 - u);
-    //   context.fill();
-    //   context.stroke();
-    // }
-
     u += 0.006;
-    // q -= 0.005;
 
     if (u > 1) {
       u = 0;
-      // q = 2;
     }
     isCreatedRef.current = true;
   };
@@ -145,13 +138,16 @@ export default function ChinaMap({}: Props) {
       }
 
       // 1、声明矩形投影
-      const projection = d3.geoEquirectangular().fitExtent(
-        [
-          [5, 5],
-          [800, 800],
-        ],
-        geojson
-      ) as d3.GeoProjection;
+      const projection = d3
+        .geoMercator()
+        // .center([107, 31])
+        .fitExtent(
+          [
+            [0, 0],
+            [WIDTH, HEIGHT],
+          ],
+          geojson
+        ) as d3.GeoProjection;
 
       // 2、声明路径生成器
       const geoGenerator = d3
@@ -159,12 +155,6 @@ export default function ChinaMap({}: Props) {
         .projection(projection)
         .pointRadius(4)
         .context(contextRef.current!);
-
-      // 3、定时绘制canvas
-      // intervalRef.current = window.setInterval(
-      //   update.bind(this, contextRef.current!, geoGenerator, projection, geojson),
-      //   50
-      // );
 
       function animate(
         context: CanvasRenderingContext2D,
@@ -197,8 +187,10 @@ export default function ChinaMap({}: Props) {
   }, []);
   return (
     <div id="content">
-      <canvas width="800" height="800"></canvas>
-      <div className="bounding-box"></div>
+      <canvas width={WIDTH} height={HEIGHT}></canvas>
+      <img id="mapBc" src={mapBc} style={{ display: "none" }} />
+      <img id="mapBc1" src={mapBc1} style={{ display: "none" }} />
+      {/* <div className="bounding-box"></div> */}
     </div>
   );
 }

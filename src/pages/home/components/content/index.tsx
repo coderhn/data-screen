@@ -1,12 +1,10 @@
 import React from "react";
 import ChinaMap from "../../../../components/2d-map";
 import SvgChinaMap from "../../../../components/2d-map/svg-map";
-
-type Props = {};
-
-export default function Content({}: Props) {
+import "./style.css";
+export default function Content() {
   return (
-    <div>
+    <div className="body">
       <ChinaMap />
       {/* <SvgChinaMap /> */}
     </div>

@@ -1,3 +1,11 @@
+#content{
+  /* width: 750px;
+  height: 735px; 
+   background-image: url(../../assets/map_bc_1.png);
+  background-position: center;
+  background-size: contain;;
+  background-repeat: no-repeat; */
+}
 #content .centroid {
     display: none;
   }
