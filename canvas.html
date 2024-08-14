@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Offscreen Canvas Example</title>
+    <style>
+      canvas {
+        border: 1px solid black;
+        display: block;
+        margin: 20px auto;
+      }
+    </style>
+  </head>
+  <body>
+    <div style="width: 800; height: 800" id="content">
+      <canvas id="mainCanvas" width="500" height="500"></canvas>
+    </div>
+
+    <script>
+      // 获取主Canvas和上下文
+      const mainCanvas = document.getElementById("mainCanvas");
+      const mainCtx = mainCanvas.getContext("2d");
+
+      // 创建离屏Canvas并获取上下文
+      const offscreenCanvas = document.createElement("canvas");
+      offscreenCanvas.width = 500;
+      offscreenCanvas.height = 500;
+      const offscreenCtx = offscreenCanvas.getContext("2d");
+
+      // 在离屏Canvas上绘制静态背景
+      function drawStaticBackground(ctx) {
+        // 绘制背景颜色
+        ctx.fillStyle = "lightblue";
+        ctx.fillRect(0, 0, 500, 500);
+
+        // 绘制一些静态的装饰元素
+        ctx.fillStyle = "green";
+        ctx.fillRect(50, 400, 400, 50); // 地面
+
+        ctx.fillStyle = "brown";
+        ctx.fillRect(150, 300, 50, 100); // 树干
+
+        ctx.fillStyle = "darkgreen";
+        ctx.beginPath();
+        ctx.moveTo(175, 150);
+        ctx.lineTo(100, 300);
+        ctx.lineTo(250, 300);
+        ctx.closePath();
+        ctx.fill(); // 树冠
+      }
+
+      // 在主Canvas上绘制动态内容
+      function drawDynamicContent(ctx, frame) {
+        // 清除前景
+        ctx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
+
+        // 绘制静态背景（使用缓存的内容）
+        ctx.drawImage(offscreenCanvas, 0, 0);
+
+        // 绘制动态内容（比如一个移动的圆）
+        ctx.fillStyle = "red";
+        ctx.beginPath();
+        ctx.arc(250 + Math.sin(frame / 20) * 100, 250, 20, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // 绘制静态背景到离屏Canvas
+      drawStaticBackground(offscreenCtx);
+
+      // 动画循环
+      let frame = 0;
+      function animate() {
+        frame++;
+        drawDynamicContent(mainCtx, frame);
+        requestAnimationFrame(animate);
+      }
+
+      animate();
+
+      function resizeCanvas(event) {
+        // console.log("event", event);
+        const canvas = document.getElementById("content");
+        const xScale = canvas.clientWidth / 800;
+        const yScale = canvas.clientHeight / 800;
+
+        const scale = Math.min(xScale, yScale);
+
+        // 应用缩放
+        canvas.style.transform = `scale(${scale})`;
+        // canvas.setAttribute("transform", "scale()");
+        // console.log("height", canvas.clientHeight, canvas.clientWidth);
+        // canvas.clientHeight;
+      }
+
+      // .addEventListener("resize", resizeCanvas);
+
+      window.addEventListener("resize", resizeCanvas);
+      resizeCanvas();
+      // 开始动画
+    </script>
+  </body>
+</html>

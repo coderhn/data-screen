@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import * as d3 from "d3";
 import "./style.css";
 import mapBc1 from "../../assets/map_bc_1.png";
@@ -61,8 +61,8 @@ export default function ChinaMap({}: Props) {
     geoJson: d3.ExtendedFeatureCollection
   ) => {
     context?.clearRect(0, 0, WIDTH, HEIGHT);
-    context.drawImage(document.getElementById("mapBc") as HTMLImageElement, 0, 0, WIDTH, HEIGHT);
-    context.drawImage(document.getElementById("mapBc1") as HTMLImageElement, -5, 20, WIDTH, HEIGHT);
+    // context.drawImage(document.getElementById("mapBc") as HTMLImageElement, 0, 0, WIDTH, HEIGHT);
+    // context.drawImage(document.getElementById("mapBc1") as HTMLImageElement, -5, 20, WIDTH, HEIGHT);
     // 遍历geojson对象根据每个feature对象生成地图（为什么这样做，方便后面按省进行鼠标交互），填充、描边地图
     geoJson.features?.forEach((d, i) => {
       const centroid = geoGenerator.centroid(d);
@@ -185,11 +185,31 @@ export default function ChinaMap({}: Props) {
       };
     });
   }, []);
+
+  // const resizeObserver = useRef<ResizeObserver>();
+
+  // useEffect(() => {
+  //   const contentDom = document.getElementById("content");
+  //   function resizeChange() {
+  //     const scaleX = contentDom!.clientWidth / 800;
+  //     const scaleY = contentDom!.clientHeight / 800;
+  //     const scale = Math.min(scaleX, scaleY);
+  //     contentDom!.style.transform = `scale(${scale})`;
+  //   }
+  //   resizeObserver.current = new ResizeObserver(() => resizeChange());
+
+  //   resizeObserver.current.observe(contentDom!);
+
+  //   return () => {
+  //     resizeObserver.current?.disconnect();
+  //   };
+  // }, []);
   return (
     <div id="content">
       <canvas width={WIDTH} height={HEIGHT}></canvas>
-      <img id="mapBc" src={mapBc} style={{ display: "none" }} />
-      <img id="mapBc1" src={mapBc1} style={{ display: "none" }} />
+
+      {/* <img id="mapBc" src={mapBc} style={{ display: "none" }} />
+      <img id="mapBc1" src={mapBc1} style={{ display: "none" }} /> */}
       {/* <div className="bounding-box"></div> */}
     </div>
   );

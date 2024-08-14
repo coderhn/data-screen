@@ -1,4 +1,10 @@
 #content{
+  flex: 1;
+  /* min-width: 400px; */
+  display: flex;
+  /* align-items: center; */
+  justify-content: center;
+  /* margin: 0 auto; */
   /* width: 750px;
   height: 735px; 
    background-image: url(../../assets/map_bc_1.png);

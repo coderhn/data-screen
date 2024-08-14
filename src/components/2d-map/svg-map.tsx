@@ -3,17 +3,6 @@ import * as d3 from "d3";
 import "./style.css";
 type Props = {};
 
-let zoom = d3.zoom().on("zoom", handleZoom);
-
-function handleZoom(e) {
-  d3.select("#content g.map").attr("transform", e.transform);
-  d3.select("#content g.centroid").attr("transform", e.transform);
-  d3.selectAll("#content path").attr("transform", e.transform);
-}
-
-function initZoom() {
-  d3.select("#content svg").call(zoom);
-}
 export default function SvgChinaMap({}: Props) {
   const isCreatedRef = useRef(false);
 

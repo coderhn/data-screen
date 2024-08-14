@@ -3,107 +3,91 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>China Map with Flowing Light Effect</title>
-    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <title>3D China Map with Three.js</title>
     <style>
-      /* 基本样式 */
-      svg {
-        width: 800px;
-        height: 800px;
-        background-color: #f9f9f9;
+      body {
+        margin: 0;
       }
-
-      /* 路径的基本样式 */
-      path {
-        fill: none;
-        stroke-width: 2;
-        stroke: url(#grad1); /* 应用渐变作为轮廓颜色 */
+      canvas {
+        display: block;
       }
     </style>
   </head>
   <body>
-    <svg></svg>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three/examples/js/loaders/JSONLoader.js"></script>
+    <!-- <script src="https://cdn.jsdelivr.net/npm/d3@7"></script> -->
 
-    <script>
-      // 设置投影方式
-      const projection = d3.geoMercator().center([104, 35]).scale(600).translate([400, 400]); // 将地图居中
+    <script type="module">
+      import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7/+esm";
+      // 创建场景
+      const scene = new THREE.Scene();
 
-      const path = d3.geoPath().projection(projection);
+      // 创建相机
+      const camera = new THREE.PerspectiveCamera(
+        75,
+        window.innerWidth / window.innerHeight,
+        0.1,
+        1000
+      );
+      camera.position.set(0, 100, 200);
 
-      // 创建SVG
-      const svg = d3.select("svg");
+      // 创建渲染器
+      const renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      document.body.appendChild(renderer.domElement);
 
-      // 定义流光渐变
-      svg
-        .append("defs")
-        .append("linearGradient")
-        .attr("id", "grad1")
-        .attr("x1", "100%")
-        .attr("y1", "0%")
-        .attr("x2", "0%")
-        .attr("y2", "0%")
-        .selectAll("stop")
-        .data([
-          { offset: "0%", color: "rgba(255, 0, 0, 0.5)" },
-          { offset: "50%", color: "rgba(255, 255, 0, 1)" },
-          { offset: "100%", color: "rgba(255, 0, 0, 0.5)" },
-        ])
-        .enter()
-        .append("stop")
-        .attr("offset", function (d) {
-          return d.offset;
-        })
-        .attr("stop-color", function (d) {
-          return d.color;
+      // 添加轨道控制器
+      const controls = new THREE.OrbitControls(camera, renderer.domElement);
+
+      // 地理投影转换器
+      const projection = d3.geoMercator().scale(80).center([105, 38]); // 使用墨卡托投影
+
+      // 加载GeoJSON数据
+      d3.json("https://geojson.cn/api/data/china.json").then(function (data) {
+        const extrudeSettings = { depth: 2, bevelEnabled: false };
+
+        data.features.forEach((feature) => {
+          const shape = new THREE.Shape();
+
+          feature.geometry.coordinates.forEach((polygon) => {
+            const coords = polygon[0];
+            const points = coords.map((coord) => {
+              const [x, y] = projection(coord); // 投影转换
+              return new THREE.Vector2(x, y);
+            });
+
+            shape.moveTo(points[0].x, points[0].y);
+            for (let i = 1; i < points.length; i++) {
+              shape.lineTo(points[i].x, points[i].y);
+            }
+          });
+
+          const geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+          const material = new THREE.MeshBasicMaterial({ color: 0x00ff00, wireframe: true });
+          const mesh = new THREE.Mesh(geometry, material);
+
+          mesh.rotation.x = -Math.PI / 2;
+          scene.add(mesh);
         });
 
-      // 加载GeoJSON数据并绘制中国地图轮廓
-      d3.json("https://geojson.cn/api/data/china.json").then(function (geojson) {
-        // 提取所有省份的 Feature
-        const features = geojson.features;
-
-        // 使用 d3.geoPath() 绘制轮廓
-        svg
-          .selectAll("path")
-          .data(features)
-          .enter()
-          .append("path")
-          .attr("d", path)
-          .attr("class", "region"); // 为每个区域应用相同的样式类
-
-        // 创建流光效果的动画
-        svg
-          .selectAll("path")
-          .append("animate")
-          .attr("attributeName", "stroke-dashoffset")
-          .attr("from", "0")
-          .attr("to", "1000")
-          .attr("dur", "5s")
-          .attr("repeatCount", "indefinite");
+        animate();
       });
 
-      // 添加 stroke-dasharray 属性，控制轮廓的虚线段
-      svg
-        .selectAll("path")
-        .attr("stroke-dasharray", "5,5")
-        .attr("stroke-dashoffset", "0")
-        .transition()
-        .duration(5000)
-        .ease(d3.easeLinear)
-        .attrTween("stroke-dashoffset", function () {
-          return d3.interpolateString("0", "1000");
-        })
-        .on("end", function repeat() {
-          d3.select(this)
-            .attr("stroke-dashoffset", "0")
-            .transition()
-            .duration(5000)
-            .ease(d3.easeLinear)
-            .attrTween("stroke-dashoffset", function () {
-              return d3.interpolateString("0", "1000");
-            })
-            .on("end", repeat);
-        });
+      // 渲染循环
+      function animate() {
+        requestAnimationFrame(animate);
+        controls.update();
+        renderer.render(scene, camera);
+      }
+
+      // 响应窗口大小调整
+      window.addEventListener("resize", function () {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      });
     </script>
   </body>
 </html>
