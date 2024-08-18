@@ -1,9 +1,10 @@
 import React, { useEffect, useRef } from "react";
 import * as d3 from "d3";
 import "./style.css";
-type Props = {};
 
-export default function SvgChinaMap({}: Props) {
+let sequentialScale = d3.scaleSequential().domain([0, 100]).interpolator(d3.interpolateRainbow);
+
+export default function SvgChinaMap() {
   const isCreatedRef = useRef(false);
 
   useEffect(() => {
@@ -13,9 +14,9 @@ export default function SvgChinaMap({}: Props) {
       }
       const colorScale = d3.scaleOrdinal(d3.schemeCategory10);
       //   这个根据自己的布局要求来，内容宽度和高度自己定
-      let projection = d3.geoEquirectangular().fitExtent(
+      let projection = d3.geoMercator().fitExtent(
         [
-          [5, 5],
+          [0, 0],
           [800, 800],
         ],
         geojson
@@ -30,9 +31,9 @@ export default function SvgChinaMap({}: Props) {
           // @ts-ignore
           return geoGenerator(d);
         })
-        .attr("fill", (d) => {
+        .attr("fill", (_, i) => {
           // @ts-ignore
-          return colorScale(d.properties.name);
+          return sequentialScale(i + 70);
         })
         .attr("stroke", "#fff")
         .attr("stroke-width", 1)
@@ -45,7 +46,7 @@ export default function SvgChinaMap({}: Props) {
             .style("display", "inline")
             .attr("transform", "translate(" + centroid + ")");
           // @ts-ignore
-          d3.select("#content .centroid text").text(d.properties.name);
+          d3.select("#content .centroid text").text(d.properties.name).attr("fill", "#fff");
         })
         .on("mouseleave", (event) => {
           d3.select(event.currentTarget).attr("opacity", 0.8);
@@ -98,17 +99,17 @@ export default function SvgChinaMap({}: Props) {
           .transition()
           .duration(2000)
           .ease(d3.easeLinear)
-          .attr("stroke-dashoffset", 0)
-          .attrTween("stroke-width", function () {
-            return function (t) {
-              return d3.interpolateString("0", "2")(t);
-            };
-          })
-          .attrTween("opacity", function () {
-            return function (t) {
-              return d3.interpolateNumber(0, 1)(t);
-            };
-          });
+          .attr("stroke-dashoffset", 0);
+        // .attrTween("stroke-width", function () {
+        //   return function (t) {
+        //     return d3.interpolateString("0", "2")(t);
+        //   };
+        // })
+        // .attrTween("opacity", function () {
+        //   return function (t) {
+        //     return d3.interpolateNumber(0, 1)(t);
+        //   };
+        // });
       });
 
       // initZoom();
