@@ -11,6 +11,7 @@ function quadraticBezier(p0, p1, p2, t) {
   // const y = interpolate(interpolate(p0[1], p1[1])(t), interpolate(p1[1], p2[1])(t))(t);
   // return [x, y];
 }
+
 export class Animate extends MapUtil {
   geoCoordinatePairs: Array<[[number, number], [number, number]]>;
   screenCoordinatePairs: Array<[[number, number], [number, number]]>;
@@ -45,14 +46,24 @@ export class Animate extends MapUtil {
         const [x, y] = starts; // 使用 starts 坐标作为圆心
         const radius = 5 + 10 * this.u; // 固定半径，可以根据需要调整
         this.ctx.beginPath();
+
+        this.ctx.arc(x, y, radius, 0, (1 / 3) * Math.PI);
+        this.ctx.stroke();
+        this.ctx.beginPath();
+
+        this.ctx.arc(x, y, radius, (2 / 3) * Math.PI, Math.PI);
+        this.ctx.stroke();
+        this.ctx.beginPath();
+
+        this.ctx.arc(x, y, radius, (4 / 3) * Math.PI, (5 / 3) * Math.PI);
+        this.ctx.stroke();
+        this.ctx.beginPath();
+
         this.ctx.arc(x, y, radius, 0, 2 * Math.PI); // 绘制圆
         const interpolateRed = d3.interpolate("rgba(255,255,255, 0)", "rgba(255,255,255, 1)");
         this.ctx.fillStyle = interpolateRed(1 - this.u); // 根据 u 进行颜色插值
         this.ctx.lineWidth = 0.5;
-        this.ctx.strokeStyle = "#fff";
         this.ctx.fill();
-        this.ctx.stroke();
-
         this.ctx.beginPath();
         this.ctx.lineWidth = 2;
         this.ctx.strokeStyle = "rgba(29,245,245,1)";
@@ -108,6 +119,8 @@ export class Animate extends MapUtil {
       this.geoGenerator(this.mousemoveFeature);
       this.ctx.fillStyle = "rgba(255,255,255,0.4)";
       this.ctx.fill();
+      console.log("this.mousemoveFeature", this.mousemoveFeature);
+      this.ctx.fillStyle = "#fff";
     }
   }
 }
