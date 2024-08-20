@@ -53,10 +53,34 @@ export default function ChinaMap() {
       );
     });
   }, []);
+
   return (
     <div id="content">
       <canvas id="bc" width={WIDTH} height={HEIGHT}></canvas>
       <canvas id="animate-container" width={WIDTH} height={HEIGHT}></canvas>
+
+      {/* <div className="point-container">
+        <img
+          src="https://easyv.assets.dtstack.com/data/100464/608484/img/b9u452re7p_1637822498613_ozuwa7q59j.png"
+          alt=""
+        />
+        <img
+          src="https://easyv.assets.dtstack.com/data/100464/608484/img/1m06p34k2_1637822605721_nl60o5b6h3.png"
+          alt=""
+        />
+        <img
+          src="https://easyv.assets.dtstack.com/data/100464/608484/img/dybn0e7lf8_1637822520826_vu2sm2smwf.png"
+          alt=""
+        />
+        <img
+          src="https://easyv.assets.dtstack.com/data/100464/608484/img/tpyxwkgtf8_1637822529356_4mkxwe9n3m.png"
+          alt=""
+        />
+        <img
+          src="https://easyv.assets.dtstack.com/data/100464/608484/img/fv3swciuc7_1637822538887_yqcosdj91p.png"
+          alt=""
+        />
+      </div> */}
     </div>
   );
 }

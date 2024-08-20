@@ -25,4 +25,12 @@
   #content .centroid circle {
     fill: red;
   }
+
+.point-container{
+  position: absolute;
+}
+
+.point-container img{
+  position: absolute;
+}
   

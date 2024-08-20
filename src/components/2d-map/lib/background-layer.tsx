@@ -34,22 +34,23 @@ export class BackgroundLayer extends MapUtil {
       this.ctx.beginPath();
       this.geoGenerator(feature);
       this.ctx.closePath();
-      this.ctx.fillStyle = this.getColor(index);
-      this.ctx.fill();
       this.ctx.strokeStyle = "rgba(255,255,255,0.4)";
       this.ctx.stroke();
+      this.ctx.fillStyle = this.getColor(index);
+      this.ctx.fill();
 
       this.ctx.fillStyle = "#fff";
-      //@ts-ignore
-      if (feature.properties.name && feature.properties.filename) {
+      // @ts-ignore
+      if (feature.properties.name && feature.properties.filename && feature.properties.fullname) {
         this.ctx.font = "15px serif";
         this.ctx.textAlign = "center";
         this.ctx.textBaseline = "middle";
         // this.ctx.ali
         this.ctx.fillText(
           // @ts-ignore
-          feature.properties.name,
-          ...this.geoGenerator.centroid(feature)
+          feature.properties.fullname,
+          ...this.geoGenerator.centroid(feature),
+          200
         );
       }
     }
